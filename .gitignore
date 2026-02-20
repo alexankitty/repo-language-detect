@@ -36,3 +36,9 @@ htmlcov/
 # Pip
 pip-log.txt
 pip-delete-this-directory.txt
+
+# PKGBUILD
+src
+*.pkg.tar.zst
+*.tar.gz
+pkg

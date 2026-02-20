@@ -12,11 +12,15 @@ source=("${pkgname}-${pkgver}.tar.gz::https://github.com/alexankitty/repo-langua
 sha256sums=('SKIP')  # Replace with actual sha256sum after first build
 
 build() {
-    cd "${srcdir}/lang-detect-${pkgver}"
+    cd "${srcdir}/repo-language-detect-${pkgver}"
     python -m build --wheel --no-isolation
 }
 
 package() {
-    cd "${srcdir}/lang-detect-${pkgver}"
+    cd "${srcdir}/repo-language-detect-${pkgver}"
     python -m installer --destdir="${pkgdir}" dist/*.whl
+    
+    # Install languages data files to system data directory
+    mkdir -p "${pkgdir}/usr/share/detect-repo-language/languages"
+    cp -r languages/*.json "${pkgdir}/usr/share/detect-repo-language/languages/"
 }

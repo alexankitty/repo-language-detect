@@ -31,10 +31,31 @@ def load_language_config():
     """
     global LANGUAGE_EXTENSIONS, LANGUAGE_GLYPHS, LANGUAGE_WEIGHTS
     
-    languages_dir = Path(__file__).parent / "languages"
+    # Try to find languages folder in multiple locations
+    languages_dir = None
+    script_dir = Path(__file__).parent
     
-    if not languages_dir.is_dir():
-        print(f"Error: {languages_dir} folder not found", file=sys.stderr)
+    # Search paths in order of preference
+    search_paths = [
+        script_dir / "languages",  # Development/direct execution
+        script_dir.parent / "share" / "detect-repo-language" / "languages",  # System install
+        Path("/usr/share/detect-repo-language/languages"),  # Arch Linux standard
+        Path("/usr/local/share/detect-repo-language/languages"),  # Local system install
+    ]
+    
+    # Also check in the wheel data directory structure
+    import site
+    for site_dir in site.getsitepackages():
+        search_paths.insert(0, Path(site_dir) / "detect_repo_language-1.0.0.data" / "data" / "languages")
+    
+    for path in search_paths:
+        if path.is_dir():
+            languages_dir = path
+            break
+    
+    if not languages_dir:
+        print(f"Error: {search_paths[0]} folder not found", file=sys.stderr)
+        print(f"Searched in: {', '.join(str(p) for p in search_paths)}", file=sys.stderr)
         sys.exit(1)
     
     # Find all .json files recursively

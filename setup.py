@@ -45,10 +45,6 @@ setup(
     license="MIT",
     python_requires=">=3.7",
     py_modules=["detect_repo_language"],
-    data_files=[
-        ("languages", language_files),
-    ] if language_files else [],
-    include_package_data=True,
     entry_points={
         "console_scripts": [
             "detect-repo-language=detect_repo_language:main",
