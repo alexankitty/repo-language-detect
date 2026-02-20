@@ -292,7 +292,7 @@ Add language detection to your Starship prompt with optional icons:
 [custom.language]
 command = "detect_repo_language.py --primary-only"
 when = true
-format = ' $output'
+format = ' $output '
 require_repo = true
 ```
 
@@ -302,7 +302,7 @@ require_repo = true
 command = "detect_repo_language.py --primary-only --with-glyph"
 when = true
 style = "bold blue"
-format = '[ $output]($style)'
+format = '[ $output ]($style)'
 require_repo = true
 ```
 
@@ -330,7 +330,7 @@ command = "detect_repo_language.py --primary-only --with-glyph"
 symbol = "󱔎 "
 when = true
 style = "bold cyan"
-format = '[ $output]($symbol$style)'
+format = '[$symbol $output ]($style)'
 require_repo = true
 ```
 
