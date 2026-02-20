@@ -42,3 +42,7 @@ src
 *.pkg.tar.zst
 *.tar.gz
 pkg
+
+# Ignore Notes
+TAG_NOTES_*
+RELEASE_NOTES_*
