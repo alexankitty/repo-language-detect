@@ -115,7 +115,6 @@ style = "bold blue"
 ```toml
 [custom.language]
 command = "detect_repo_language.py --primary-only --with-glyph"
-symbol = "󱔎 "
 when = true
 style = "bold cyan"
 ```
