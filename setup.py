@@ -18,16 +18,14 @@ if readme_path.exists():
     with open(readme_path, encoding="utf-8") as f:
         long_description = f.read()
 
-# Gather all language JSON files and documentation
+# Gather all language JSON files (exclude template files)
 languages_dir = Path(__file__).parent / "languages"
 language_files = []
 if languages_dir.exists():
     for json_file in languages_dir.glob("*.json"):
-        language_files.append(str(json_file.relative_to(Path(__file__).parent)))
-    # Add language documentation
-    readme_file = languages_dir / "README.md"
-    if readme_file.exists():
-        language_files.append(str(readme_file.relative_to(Path(__file__).parent)))
+        # Skip template files
+        if not json_file.stem.startswith("TEMPLATE"):
+            language_files.append(str(json_file.relative_to(Path(__file__).parent)))
 
 setup(
     name="detect-repo-language",
@@ -45,6 +43,9 @@ setup(
     license="MIT",
     python_requires=">=3.7",
     py_modules=["detect_repo_language"],
+    data_files=[
+        ("detect_repo_language/languages", language_files),
+    ],
     entry_points={
         "console_scripts": [
             "detect-repo-language=detect_repo_language:main",

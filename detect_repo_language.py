@@ -6,7 +6,6 @@ Analyzes all files by extension and counts lines of code to determine
 the dominant language in a project. Optimized for quick execution.
 """
 
-import os
 import sys
 import json
 import argparse
@@ -19,6 +18,8 @@ from typing import Dict, Tuple, Optional
 LANGUAGE_EXTENSIONS = {}
 LANGUAGE_GLYPHS = {}
 LANGUAGE_WEIGHTS = {}  # Weight multiplier for each language (default 1.0)
+EXTENSION_MAP = {}  # Fast reverse lookup: extension -> language
+FILENAME_MAP = {}  # Fast reverse lookup: filename -> language
 
 
 def load_language_config():
@@ -91,9 +92,18 @@ def load_language_config():
             with open(config_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
             
-            LANGUAGE_EXTENSIONS[lang_name] = set(data.get('extensions', []))
+            extensions = set(data.get('extensions', []))
+            LANGUAGE_EXTENSIONS[lang_name] = extensions
             LANGUAGE_GLYPHS[lang_name] = data.get('glyph', '')
             LANGUAGE_WEIGHTS[lang_name] = data.get('weight', 1.0)
+            
+            # Build fast reverse lookup maps
+            for ext in extensions:
+                if ext.startswith('.'):
+                    EXTENSION_MAP[ext] = lang_name
+                else:
+                    # Filename without extension (e.g., "Dockerfile", "Makefile")
+                    FILENAME_MAP[ext] = lang_name
     
     except (json.JSONDecodeError, IOError) as e:
         print(f"Error loading language definitions: {e}", file=sys.stderr)
@@ -130,13 +140,20 @@ def should_ignore(path: Path, root: Path) -> bool:
 
 def is_git_repo(repo_path: str) -> bool:
     """
-    Check if the given path is a git repository.
+    Check if the given path is a git repository or inside one.
     
-    Tries using `git` command first, falls back to checking .git folder.
+    Fast-path: checks .git folder first (instant for non-git dirs).
+    If not found locally, tries git command (finds parent repos in nested dirs).
     """
     repo_root = Path(repo_path).resolve()
     
-    # Try using git command first
+    # Fast check: .git directory/file in current directory (instant filesystem check)
+    git_dir = repo_root / ".git"
+    if git_dir.exists():
+        return True
+    
+    # Not at repo root, but could be inside a repo - check via git command
+    # This finds parent repos and handles nested directories correctly
     try:
         result = subprocess.run(
             ['git', '-C', str(repo_root), 'rev-parse', '--git-dir'],
@@ -145,57 +162,42 @@ def is_git_repo(repo_path: str) -> bool:
         )
         return result.returncode == 0
     except (subprocess.TimeoutExpired, FileNotFoundError):
-        # git command timed out or not installed, fall back to .git folder check
-        pass
-    
-    # Fallback: check for .git directory
-    git_dir = repo_root / ".git"
-    return git_dir.exists()
+        # git command failed/timed out - not in a git repo
+        return False
 
 
 def count_lines(file_path: Path) -> int:
-    """Count non-empty, non-comment lines in a file."""
+    """Count lines in a file quickly."""
     try:
         # Skip files larger than 10MB (likely generated or minified)
         if file_path.stat().st_size > 10 * 1024 * 1024:
             return 0
         
-        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-            lines = f.readlines()
-        
-        # Simple heuristic: count non-empty lines
-        # Subtract comment lines for some languages
-        count = 0
-        for line in lines:
-            stripped = line.strip()
-            # Skip empty lines
-            if not stripped:
-                continue
-            # Rough comment filtering (not perfect, but good enough)
-            if stripped.startswith('#') or stripped.startswith('//') or stripped.startswith('/*'):
-                continue
-            count += 1
+        # Fast line counting: read in chunks and count newlines
+        # Much faster than readlines() for large files
+        with open(file_path, 'rb') as f:
+            count = 0
+            for chunk in iter(lambda: f.read(1024*1024), b''):
+                count += chunk.count(b'\n')
         return count
     except Exception:
         return 0
 
 
 def get_file_language(file_path: Path) -> Optional[str]:
-    """Determine the language of a file based on extension and name."""
-    # Check by filename first (e.g., Dockerfile, Makefile)
-    for lang, exts in LANGUAGE_EXTENSIONS.items():
-        if file_path.name in exts:
-            return lang
+    """Determine the language of a file based on extension and name (optimized)."""
+    # Check by filename first (e.g., Dockerfile, Makefile) - O(1) lookup
+    if file_path.name in FILENAME_MAP:
+        return FILENAME_MAP[file_path.name]
     
-    # Check by extension
+    # Check by extension - O(1) lookup
     suffix = file_path.suffix.lower()
-    for lang, exts in LANGUAGE_EXTENSIONS.items():
-        if suffix in exts:
-            return lang
+    if suffix in EXTENSION_MAP:
+        return EXTENSION_MAP[suffix]
     
     return None
 
-def check_dir(repo_path: str) -> bool:
+def check_dir(repo_path: str) -> None:
     repo_root = Path(repo_path).resolve()
     if not repo_root.is_dir():
         print(f"Error: {repo_path} is not a directory", file=sys.stderr)

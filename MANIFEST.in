@@ -1,4 +1,4 @@
 include README.md
 include LICENSE
-recursive-include languages *.json *.md
-recursive-include tests *.sh *.md
+recursive-include languages *.json
+exclude languages/TEMPLATE*.json
