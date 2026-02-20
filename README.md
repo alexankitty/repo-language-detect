@@ -292,6 +292,8 @@ Add language detection to your Starship prompt with optional icons:
 [custom.language]
 command = "detect_repo_language.py --primary-only"
 when = true
+format = ' $output'
+require_repo = true
 ```
 
 **With Nerdfont icon (recommended for Nerd Font users):**
@@ -300,6 +302,8 @@ when = true
 command = "detect_repo_language.py --primary-only --with-glyph"
 when = true
 style = "bold blue"
+format = '[ $output]($style)'
+require_repo = true
 ```
 
 **With custom prefix:**
@@ -308,6 +312,7 @@ style = "bold blue"
 command = "detect_repo_language.py --primary-only --prefix '󱔎 '"
 when = true
 style = "bold magenta"
+require_repo = true
 ```
 
 **With prefix and glyph:**
@@ -315,6 +320,7 @@ style = "bold magenta"
 [custom.language]
 command = "detect_repo_language.py --primary-only --with-glyph --prefix '📝 '"
 when = true
+require_repo = true
 ```
 
 **Full example in `starship.toml`:**
@@ -324,6 +330,8 @@ command = "detect_repo_language.py --primary-only --with-glyph"
 symbol = "󱔎 "
 when = true
 style = "bold cyan"
+format = '[ $output]($symbol$style)'
+require_repo = true
 ```
 
 This will display the repository's primary language (with icon if enabled) in your shell prompt as you navigate between projects. The `--primary-only` flag ensures minimal overhead (~66ms) suitable for real-time prompt updates.
