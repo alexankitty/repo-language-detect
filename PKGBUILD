@@ -4,11 +4,11 @@ pkgver=1.0.0
 pkgrel=1
 pkgdesc="Detect the primary programming language of a repository by analyzing file extensions and lines of code"
 arch=('any')
-url="https://github.com/yourusername/lang-detect"
+url="https://github.com/alexankitty/repo-language-detect"
 license=('MIT')
 depends=('python>=3.7')
 makedepends=('python-build' 'python-installer' 'python-wheel')
-source=("${pkgname}-${pkgver}.tar.gz::https://github.com/yourusername/lang-detect/archive/refs/tags/v${pkgver}.tar.gz")
+source=("${pkgname}-${pkgver}.tar.gz::https://github.com/alexankitty/repo-language-detect/archive/refs/tags/v${pkgver}.tar.gz")
 sha256sums=('SKIP')  # Replace with actual sha256sum after first build
 
 build() {

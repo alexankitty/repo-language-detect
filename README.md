@@ -19,9 +19,45 @@ Yes this was entirely vibe coded. No I don't really care. No this statement did 
 
 No external dependencies required! Just ensure you have Python 3.7+.
 
+### Method 1: Direct Script (Simple)
 ```bash
 chmod +x detect_repo_language.py
+./detect_repo_language.py --primary-only /path/to/repo
 ```
+
+### Method 2: Install as Command (Wheel)
+Install the built wheel package:
+
+```bash
+pip install dist/detect_repo_language-1.0.0-py3-none-any.whl
+```
+
+Then use from anywhere:
+```bash
+detect-repo-language --primary-only /path/to/repo
+```
+
+Or build the wheel yourself:
+```bash
+pip install build
+python3 -m build --wheel
+pip install dist/*.whl
+```
+
+### Method 3: Arch Linux (PKGBUILD)
+For Arch Linux, install using the PKGBUILD:
+
+```bash
+makepkg -si
+```
+
+If installing from PyPI:
+```bash
+cp PKGBUILD.pypi PKGBUILD
+makepkg -si
+```
+
+See [PKGBUILD-README.md](PKGBUILD-README.md) for detailed Arch Linux installation instructions and options.
 
 ## Project Structure
 
