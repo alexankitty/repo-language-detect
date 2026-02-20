@@ -195,6 +195,16 @@ def get_file_language(file_path: Path) -> Optional[str]:
     
     return None
 
+def check_dir(repo_path: str) -> bool:
+    repo_root = Path(repo_path).resolve()
+    if not repo_root.is_dir():
+        print(f"Error: {repo_path} is not a directory", file=sys.stderr)
+        sys.exit(1)
+    
+    # Check if it's a git repository
+    if not is_git_repo(repo_path):
+        sys.exit(0)  # Exit silently (suitable for Starship integration)
+
 
 def analyze_repository(repo_path: str) -> Dict[str, Tuple[int, int]]:
     """
@@ -207,14 +217,6 @@ def analyze_repository(repo_path: str) -> Dict[str, Tuple[int, int]]:
         Dictionary mapping language -> (file_count, line_count)
     """
     repo_root = Path(repo_path).resolve()
-    
-    if not repo_root.is_dir():
-        print(f"Error: {repo_path} is not a directory", file=sys.stderr)
-        sys.exit(1)
-    
-    # Check if it's a git repository
-    if not is_git_repo(repo_path):
-        sys.exit(0)  # Exit silently (suitable for Starship integration)
     
     language_stats = defaultdict(lambda: [0, 0])  # [file_count, line_count]
     
@@ -296,8 +298,6 @@ def format_language_output(language: str, with_glyph: bool = False) -> str:
 
 def main():
     """Main entry point."""
-    # Load language configuration from JSON
-    load_language_config()
     
     parser = argparse.ArgumentParser(
         description="Detect the primary programming language of a repository",
@@ -339,6 +339,9 @@ Examples:
     )
     
     args = parser.parse_args()
+
+    check_dir(args.repo_path)  # Validate directory and git repo before loading config
+    load_language_config()  # Load language definitions after confirming repo is valid
     
     stats = analyze_repository(args.repo_path)
     
