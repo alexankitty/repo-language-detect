@@ -119,6 +119,10 @@ IGNORE_DIRS = {
     'build', 'dist', 'target', 'out', '.gradle',
     '.idea', '.vscode', '.DS_Store',
     'coverage', '.nyc_output',
+    'bin', 'obj', 'logs', 'tmp', 'temp',
+    'release', 'releases',
+    '.github', '.gitlab', '.bitbucket',
+    '.conda', '.mypy_cache', '.ruff_cache', '.tox',
 }
 
 IGNORE_FILES = {
