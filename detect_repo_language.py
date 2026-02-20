@@ -72,28 +72,20 @@ def load_language_config():
         print(f"Error: No language definitions found in {languages_dir}", file=sys.stderr)
         sys.exit(1)
     
-    # Mapping for special language name cases
-    name_mapping = {
-        "c-sharp": "C#",
-        "c++": "C++",
-    }
-    
     try:
         for config_file in json_files:
             # Get language name from filename (remove .json)
             lang_name = config_file.stem
             
-            # Apply special name mappings
-            if lang_name in name_mapping:
-                lang_name = name_mapping[lang_name]
+            with open(config_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            # Use 'name' field from JSON if provided, otherwise use title-cased filename
+            if 'name' in data:
+                lang_name = data['name']
             else:
                 # Convert to Title Case (e.g., python -> Python, javascript -> Javascript)
                 lang_name = lang_name.title()
-                # Handle special cases like "Json" -> "JSON", "Yaml" -> "YAML"
-                lang_name = lang_name.replace("Json", "JSON").replace("Yaml", "YAML").replace("Xml", "XML").replace("Html", "HTML").replace("Php", "PHP").replace("Sql", "SQL").replace("Css", "CSS").replace("Toml", "TOML")
-            
-            with open(config_file, 'r', encoding='utf-8') as f:
-                data = json.load(f)
             
             extensions = set(data.get('extensions', []))
             LANGUAGE_EXTENSIONS[lang_name] = extensions

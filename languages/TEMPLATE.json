@@ -1,5 +1,6 @@
 {
   "extensions": [".ext1", ".ext2"],
+  "name": "Language Name",
   "glyph": "\ue73c",
   "weight": 1.0
 }
