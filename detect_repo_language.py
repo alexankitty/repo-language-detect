@@ -15,9 +15,10 @@ from pathlib import Path
 from collections import defaultdict
 from typing import Dict, Tuple, Optional
 
-# Language file extension mappings and glyphs (loaded from JSON)
+# Language file extension mappings, glyphs, and weights (loaded from JSON)
 LANGUAGE_EXTENSIONS = {}
 LANGUAGE_GLYPHS = {}
+LANGUAGE_WEIGHTS = {}  # Weight multiplier for each language (default 1.0)
 
 
 def load_language_config():
@@ -25,9 +26,10 @@ def load_language_config():
     Load language configuration from the languages/ folder.
     
     Recursively loads all .json files from the languages folder.
-    Each file should contain: {"extensions": [...], "glyph": "..."}
+    Each file should contain: {"extensions": [...], "glyph": "...", "weight": 1.0}
+    Weight is optional (default: 1.0). Use < 1.0 to deprioritize, > 1.0 to prioritize.
     """
-    global LANGUAGE_EXTENSIONS, LANGUAGE_GLYPHS
+    global LANGUAGE_EXTENSIONS, LANGUAGE_GLYPHS, LANGUAGE_WEIGHTS
     
     languages_dir = Path(__file__).parent / "languages"
     
@@ -70,6 +72,7 @@ def load_language_config():
             
             LANGUAGE_EXTENSIONS[lang_name] = set(data.get('extensions', []))
             LANGUAGE_GLYPHS[lang_name] = data.get('glyph', '')
+            LANGUAGE_WEIGHTS[lang_name] = data.get('weight', 1.0)
     
     except (json.JSONDecodeError, IOError) as e:
         print(f"Error loading language definitions: {e}", file=sys.stderr)
@@ -205,8 +208,11 @@ def analyze_repository(repo_path: str) -> Dict[str, Tuple[int, int]]:
         language = get_file_language(file_path)
         if language:
             lines = count_lines(file_path)
+            # Apply language weight multiplier
+            weight = LANGUAGE_WEIGHTS.get(language, 1.0)
+            weighted_lines = int(lines * weight)
             language_stats[language][0] += 1
-            language_stats[language][1] += lines
+            language_stats[language][1] += weighted_lines
     
     return {lang: tuple(stats) for lang, stats in language_stats.items()}
 

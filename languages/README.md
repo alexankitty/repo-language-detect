@@ -11,17 +11,19 @@ To add support for a new language, follow these steps:
    cp TEMPLATE.json mylanguage.json
    ```
 
-2. **Edit the file** with your language's extensions and Nerdfont glyph:
+2. **Edit the file** with your language's extensions, Nerdfont glyph, and optional weight:
    ```json
    {
      "extensions": [".py", ".pyw"],
-     "glyph": "\ue73c"
+     "glyph": "\ue73c",
+     "weight": 1.0
    }
    ```
 
 3. **Fields:**
    - `extensions`: Array of file extensions (including the dot, e.g., `".py"`)
    - `glyph`: Unicode escape sequence for a Nerdfont icon (optional, can be empty string `""`)
+   - `weight`: Multiplier for line counts (optional, default 1.0). Use values < 1.0 to deprioritize language (e.g., 0.5), > 1.0 to prioritize
 
 4. **Save and test:**
    The script will automatically discover and load your new language on the next run!
@@ -81,6 +83,37 @@ Files can be organized hierarchically in subfolders:
 - `languages/systems/rust.json`
 
 The script will recursively discover all `.json` files regardless of folder depth.
+
+## Language Weighting
+
+By default, all languages have a weight of `1.0`, meaning line counts contribute equally to determining the primary language.
+
+Use weights to adjust language detection priority:
+
+**Examples:**
+
+```json
+{
+  "extensions": [".md"],
+  "glyph": "\ue729",
+  "weight": 0.5
+}
+```
+This Markdown file contributes only 50% of its line count, preventing large README files from incorrectly identifying the language as "Markdown".
+
+```json
+{
+  "extensions": [".rs"],
+  "glyph": "\ue7a3",
+  "weight": 1.5
+}
+```
+This Rust file contributes 150% of its line count, prioritizing Rust as the primary language.
+
+**Common Use Cases:**
+- `weight: 0.5` - Configuration/documentation files (Markdown, YAML, Makefile)
+- `weight: 1.0` - Standard source code (default)
+- `weight: 1.5+` - Languages you want to prioritize
 
 ## Notes
 
