@@ -1,7 +1,8 @@
 # Repository Language Detector
 
 A Python script that analyzes a repository to determine its primary programming language by counting files and lines of code.  
-Yes this was entirely vibe coded. No I don't really care. No this statement did not come from the AI. Use it if you want, it works, I just didn't want to make the effort.
+Yes this was entirely vibe coded. No I don't really care. No this statement did not come from the AI. Use it if you want, it works, I just didn't want to make the effort.  
+By the way, this dumbass robot makes a bunch of baseless claims that I am not willing to verify or stand behind.
 
 ## Features
 
