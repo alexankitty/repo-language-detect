@@ -1,0 +1,25 @@
+# Maintainer: Alexandra
+# Note: Use this PKGBUILD if package is published to PyPI
+# For GitHub source-based building, use PKGBUILD instead
+
+pkgname=detect-repo-language
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="Detect the primary programming language of a repository by analyzing file extensions and lines of code"
+arch=('any')
+url="https://github.com/yourusername/lang-detect"
+license=('MIT')
+depends=('python>=3.7')
+makedepends=('python-pip' 'python-setuptools')
+source=("https://files.pythonhosted.org/packages/source/d/detect-repo-language/detect-repo-language-${pkgver}.tar.gz")
+sha256sums=('SKIP')  # Replace SKIP with actual sha256sum from PyPI
+
+build() {
+    cd "${srcdir}/detect-repo-language-${pkgver}"
+    python setup.py build
+}
+
+package() {
+    cd "${srcdir}/detect-repo-language-${pkgver}"
+    python setup.py install --root="${pkgdir}" --optimize=1
+}

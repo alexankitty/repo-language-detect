@@ -1,0 +1,38 @@
+__pycache__
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+*.egg
+.eggs/
+
+# Python cache
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# Build tools
+.tox/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Pip
+pip-log.txt
+pip-delete-this-directory.txt

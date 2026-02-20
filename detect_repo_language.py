@@ -10,79 +10,70 @@ import os
 import sys
 import json
 import argparse
+import subprocess
 from pathlib import Path
 from collections import defaultdict
 from typing import Dict, Tuple, Optional
 
-# Language file extension mappings
-LANGUAGE_EXTENSIONS = {
-    'Python': {'.py', '.pyw', '.pyx', '.pyi', '.pyc'},
-    'JavaScript': {'.js', '.jsx', '.mjs', '.cjs'},
-    'TypeScript': {'.ts', '.tsx'},
-    'Java': {'.java'},
-    'C': {'.c', '.h'},
-    'C++': {'.cpp', '.cc', '.cxx', '.c++', '.hpp', '.hh', '.h++'},
-    'C#': {'.cs'},
-    'Ruby': {'.rb', '.rbw'},
-    'Go': {'.go'},
-    'Rust': {'.rs'},
-    'PHP': {'.php', '.php3', '.php4', '.php5', '.phtml'},
-    'Swift': {'.swift'},
-    'Kotlin': {'.kt', '.kts'},
-    'Scala': {'.scala'},
-    'Haskell': {'.hs', '.lhs'},
-    'R': {'.r', '.R', '.Rd'},
-    'Julia': {'.jl'},
-    'Elixir': {'.ex', '.exs'},
-    'Erlang': {'.erl', '.hrl'},
-    'Perl': {'.pl', '.pm', '.pod'},
-    'Shell': {'.sh', '.bash', '.zsh', '.fish'},
-    'SQL': {'.sql'},
-    'HTML': {'.html', '.htm', '.xhtml'},
-    'CSS': {'.css', '.scss', '.sass', '.less'},
-    'YAML': {'.yaml', '.yml'},
-    'JSON': {'.json'},
-    'XML': {'.xml', '.xsd', '.xsl'},
-    'Markdown': {'.md', '.markdown', '.mdown', '.mkd', '.mkdn'},
-    'TOML': {'.toml'},
-    'Dockerfile': {'Dockerfile'},
-    'Makefile': {'Makefile', 'makefile'},
-}
+# Language file extension mappings and glyphs (loaded from JSON)
+LANGUAGE_EXTENSIONS = {}
+LANGUAGE_GLYPHS = {}
 
-# Nerdfont glyphs for languages
-LANGUAGE_GLYPHS = {
-    'Python': '\ue73c',  # 
-    'JavaScript': '\ue74e',  # 
-    'TypeScript': '\ue628',  # 
-    'Java': '\ue738',  # 
-    'C': '\ue61e',  # 
-    'C++': '\ue61d',  # 
-    'C#': '\ue905',  # 
-    'Ruby': '\ue739',  # 
-    'Go': '\ueab0',  # 
-    'Rust': '\ue7a8',  # 
-    'PHP': '\ue73d',  # 
-    'Swift': '\ufbe3',  # 
-    'Kotlin': '\ue636',  # 
-    'Scala': '\ue737',  # 
-    'Haskell': '\ue777',  # 
-    'R': '\uf4f0',  # 
-    'Julia': '\ue624',  # 
-    'Elixir': '\ue62b',  # 
-    'Erlang': '\ue7b1',  # 
-    'Perl': '\ue769',  # 
-    'Shell': '\uf489',  # 
-    'SQL': '\ue706',  # 
-    'HTML': '\ue736',  # 
-    'CSS': '\ue749',  # 
-    'YAML': '\ue6a0',  # 
-    'JSON': '\ue60b',  # 
-    'XML': '\ue619',  # 
-    'Markdown': '\ue729',  # 
-    'TOML': '\ue60b',  # 
-    'Dockerfile': '\uf308',  # 
-    'Makefile': '\ue628',  # 
-}
+
+def load_language_config():
+    """
+    Load language configuration from the languages/ folder.
+    
+    Recursively loads all .json files from the languages folder.
+    Each file should contain: {"extensions": [...], "glyph": "..."}
+    """
+    global LANGUAGE_EXTENSIONS, LANGUAGE_GLYPHS
+    
+    languages_dir = Path(__file__).parent / "languages"
+    
+    if not languages_dir.is_dir():
+        print(f"Error: {languages_dir} folder not found", file=sys.stderr)
+        sys.exit(1)
+    
+    # Find all .json files recursively
+    json_files = sorted(languages_dir.rglob("*.json"))
+    
+    # Filter out template/documentation files (those starting with uppercase)
+    json_files = [f for f in json_files if not f.stem[0].isupper()]
+    
+    if not json_files:
+        print(f"Error: No language definitions found in {languages_dir}", file=sys.stderr)
+        sys.exit(1)
+    
+    # Mapping for special language name cases
+    name_mapping = {
+        "c-sharp": "C#",
+        "c++": "C++",
+    }
+    
+    try:
+        for config_file in json_files:
+            # Get language name from filename (remove .json)
+            lang_name = config_file.stem
+            
+            # Apply special name mappings
+            if lang_name in name_mapping:
+                lang_name = name_mapping[lang_name]
+            else:
+                # Convert to Title Case (e.g., python -> Python, javascript -> Javascript)
+                lang_name = lang_name.title()
+                # Handle special cases like "Json" -> "JSON", "Yaml" -> "YAML"
+                lang_name = lang_name.replace("Json", "JSON").replace("Yaml", "YAML").replace("Xml", "XML").replace("Html", "HTML").replace("Php", "PHP").replace("Sql", "SQL").replace("Css", "CSS").replace("Toml", "TOML")
+            
+            with open(config_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            LANGUAGE_EXTENSIONS[lang_name] = set(data.get('extensions', []))
+            LANGUAGE_GLYPHS[lang_name] = data.get('glyph', '')
+    
+    except (json.JSONDecodeError, IOError) as e:
+        print(f"Error loading language definitions: {e}", file=sys.stderr)
+        sys.exit(1)
 
 # Directories and files to ignore
 IGNORE_DIRS = {
@@ -111,6 +102,31 @@ def should_ignore(path: Path, root: Path) -> bool:
         return True
     
     return False
+
+
+def is_git_repo(repo_path: str) -> bool:
+    """
+    Check if the given path is a git repository.
+    
+    Tries using `git` command first, falls back to checking .git folder.
+    """
+    repo_root = Path(repo_path).resolve()
+    
+    # Try using git command first
+    try:
+        result = subprocess.run(
+            ['git', '-C', str(repo_root), 'rev-parse', '--git-dir'],
+            capture_output=True,
+            timeout=2
+        )
+        return result.returncode == 0
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        # git command timed out or not installed, fall back to .git folder check
+        pass
+    
+    # Fallback: check for .git directory
+    git_dir = repo_root / ".git"
+    return git_dir.exists()
 
 
 def count_lines(file_path: Path) -> int:
@@ -171,6 +187,10 @@ def analyze_repository(repo_path: str) -> Dict[str, Tuple[int, int]]:
     if not repo_root.is_dir():
         print(f"Error: {repo_path} is not a directory", file=sys.stderr)
         sys.exit(1)
+    
+    # Check if it's a git repository
+    if not is_git_repo(repo_path):
+        sys.exit(0)  # Exit silently (suitable for Starship integration)
     
     language_stats = defaultdict(lambda: [0, 0])  # [file_count, line_count]
     
@@ -249,15 +269,19 @@ def format_language_output(language: str, with_glyph: bool = False) -> str:
 
 def main():
     """Main entry point."""
+    # Load language configuration from JSON
+    load_language_config()
+    
     parser = argparse.ArgumentParser(
         description="Detect the primary programming language of a repository",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  detect_repo_language.py .                         # Full analysis
-  detect_repo_language.py --primary-only .          # Starship integration
-  detect_repo_language.py --primary-only --with-glyph .  # With icon
-  detect_repo_language.py --json .                  # JSON output
+  detect_repo_language.py .                                    # Full analysis
+  detect_repo_language.py --primary-only .                     # Starship integration
+  detect_repo_language.py --primary-only --with-glyph .        # With icon
+  detect_repo_language.py --primary-only --prefix "Lang: " .   # With prefix
+  detect_repo_language.py --json .                             # JSON output
         """
     )
     parser.add_argument(
@@ -277,6 +301,11 @@ Examples:
         help="Include Nerdfont glyph/icon in output"
     )
     parser.add_argument(
+        "--prefix",
+        default="",
+        help="Add a prefix to the output (e.g., 'Language: ' or '󱔎 '). Works with --primary-only"
+    )
+    parser.add_argument(
         "--json",
         action="store_true",
         help="Output results in JSON format"
@@ -290,6 +319,8 @@ Examples:
         language = get_primary_language(stats)
         if language:
             output = format_language_output(language, args.with_glyph)
+            if args.prefix:
+                output = f"{args.prefix}{output}"
             print(output)
     elif args.json:
         output = {
