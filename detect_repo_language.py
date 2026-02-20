@@ -12,6 +12,7 @@ import argparse
 import subprocess
 import time
 import hashlib
+import shutil
 from pathlib import Path
 from collections import defaultdict
 from typing import Dict, Tuple, Optional
@@ -124,6 +125,7 @@ IGNORE_DIRS = {
     '.github', '.gitlab', '.bitbucket',
     '.conda', '.mypy_cache', '.ruff_cache', '.tox',
     'debug', 'debug-info', 'debug-symbols',
+    'bower_components', 'jspm_packages',
 }
 
 IGNORE_FILES = {
@@ -343,6 +345,7 @@ def analyze_repository(repo_path: str) -> Dict[str, Tuple[int, int]]:
         
     Returns:
         Dictionary mapping language -> (file_count, line_count)
+        Note: Returns UNWEIGHTED line counts. Weights are applied at display time.
     """
     repo_root = Path(repo_path).resolve()
     
@@ -359,50 +362,153 @@ def analyze_repository(repo_path: str) -> Dict[str, Tuple[int, int]]:
         language = get_file_language(file_path)
         if language:
             lines = count_lines(file_path)
-            # Apply language weight multiplier
-            weight = LANGUAGE_WEIGHTS.get(language, 1.0)
-            weighted_lines = int(lines * weight)
+            # Store UNWEIGHTED line counts (weights applied at display time)
             language_stats[language][0] += 1
-            language_stats[language][1] += weighted_lines
+            language_stats[language][1] += lines
     
     return {lang: tuple(stats) for lang, stats in language_stats.items()}
 
 
-def print_results(stats: Dict[str, Tuple[int, int]], with_glyph: bool = False) -> None:
-    """Print the analysis results."""
+def print_results(stats: Dict[str, Tuple[int, int]], with_glyph: bool = False, show_mode: str = 'raw') -> None:
+    """Print the analysis results.
+    
+    Args:
+        stats: Language statistics dictionary
+        with_glyph: Whether to include language glyphs
+        show_mode: Display mode - 'raw' (default), 'weighted', or 'both'
+    """
     if not stats:
         print("No recognized source files found.")
         return
     
-    # Sort by lines of code (descending)
-    sorted_stats = sorted(stats.items(), key=lambda x: x[1][1], reverse=True)
+    # Keep original unweighted stats for comparison
+    unweighted_stats = stats.copy()
     
-    print("\n" + "=" * 60)
-    print("Repository Language Analysis")
-    print("=" * 60)
-    print(f"{'Language':<20} {'Files':<10} {'Lines of Code':<15}")
-    print("-" * 60)
+    # Apply weights to stats
+    weighted_stats = apply_weights_to_stats(stats)
     
+    # Sort by weighted lines of code (descending)
+    sorted_stats = sorted(weighted_stats.items(), key=lambda x: x[1][1], reverse=True)
+    
+    # Calculate totals
     total_files = 0
-    total_lines = 0
+    total_weighted_lines = 0
+    total_unweighted_lines = 0
     
-    for language, (file_count, line_count) in sorted_stats:
-        lang_display = format_language_output(language, with_glyph)
-        print(f"{lang_display:<20} {file_count:<10} {line_count:<15,}")
+    for language, (file_count, weighted_line_count) in sorted_stats:
+        unweighted_line_count = unweighted_stats[language][1]
         total_files += file_count
-        total_lines += line_count
+        total_weighted_lines += weighted_line_count
+        total_unweighted_lines += unweighted_line_count
     
-    print("-" * 60)
-    print(f"{'TOTAL':<20} {total_files:<10} {total_lines:<15,}")
-    print("=" * 60)
+    # Format output table
+    # Use fixed column widths that work well for all terminals
+    if show_mode == 'raw':
+        # Show only raw values (default)
+        # Formula: Language(18) + Files(8) + Lines#(12) + %(5) = 43 chars total
+        num_col_width = 12
+        table_width = 18 + 1 + 8 + 1 + num_col_width + 1 + 5  # Actual content width
+        
+        print("\n" + "=" * table_width)
+        print("Repository Language Analysis")
+        print("=" * table_width)
+        
+        # Print header
+        print(f"{'Language':<18} {'Files':<8} {'Lines':>{num_col_width}} {'%':<5}")
+        print("-" * table_width)
+        
+        for language, (file_count, weighted_line_count) in sorted_stats:
+            unweighted_line_count = unweighted_stats[language][1]
+            lang_display = format_language_output(language, with_glyph)
+            
+            # Calculate percentages
+            raw_pct = (unweighted_line_count / total_unweighted_lines * 100) if total_unweighted_lines > 0 else 0
+            
+            print(f"{lang_display:<18} {file_count:<8} {unweighted_line_count:>{num_col_width},} {raw_pct:>4.1f}%")
+        
+        print("-" * table_width)
+        
+        # Calculate total percentages
+        raw_total_pct = (total_unweighted_lines / total_unweighted_lines * 100) if total_unweighted_lines > 0 else 0
+        
+        print(f"{'TOTAL':<18} {total_files:<8} {total_unweighted_lines:>{num_col_width},} {raw_total_pct:>4.1f}%")
+        print("=" * table_width)
+    elif show_mode == 'weighted':
+        # Show only weighted values
+        # Formula: Language(18) + Files(8) + Lines#(12) + %(5) = 43 chars total
+        num_col_width = 12
+        table_width = 18 + 1 + 8 + 1 + num_col_width + 1 + 5  # Actual content width
+        
+        print("\n" + "=" * table_width)
+        print("Repository Language Analysis")
+        print("=" * table_width)
+        
+        # Print header
+        print(f"{'Language':<18} {'Files':<8} {'Lines':>{num_col_width}} {'%':<5}")
+        print("-" * table_width)
+        
+        for language, (file_count, weighted_line_count) in sorted_stats:
+            lang_display = format_language_output(language, with_glyph)
+            
+            # Calculate percentages
+            weighted_pct = (weighted_line_count / total_weighted_lines * 100) if total_weighted_lines > 0 else 0
+            
+            print(f"{lang_display:<18} {file_count:<8} {weighted_line_count:>{num_col_width},} {weighted_pct:>4.1f}%")
+        
+        print("-" * table_width)
+        
+        # Calculate total percentages
+        weighted_total_pct = (total_weighted_lines / total_weighted_lines * 100) if total_weighted_lines > 0 else 0
+        
+        print(f"{'TOTAL':<18} {total_files:<8} {total_weighted_lines:>{num_col_width},} {weighted_total_pct:>4.1f}%")
+        print("=" * table_width)
+    else:  # show_mode == 'both'
+        # Show both raw and weighted values
+        # Formula: Language(18) + Files(8) + Raw#(12) + Raw%(5) + Wt#(12) + Wt%(5) = 65 chars total
+        num_col_width = 12
+        table_width = 18 + 1 + 8 + 1 + num_col_width + 1 + 5 + 1 + num_col_width + 1 + 5  # Actual content width
+        
+        print("\n" + "=" * table_width)
+        print("Repository Language Analysis")
+        print("=" * table_width)
+        
+        # Print header
+        print(f"{'Language':<18} {'Files':<8} {'Lines (Raw)':>{num_col_width}} {'%':<5} {'Lines (Wt)':>{num_col_width}} {'%':<5}")
+        print("-" * table_width)
+        
+        for language, (file_count, weighted_line_count) in sorted_stats:
+            unweighted_line_count = unweighted_stats[language][1]
+            lang_display = format_language_output(language, with_glyph)
+            
+            # Calculate percentages
+            raw_pct = (unweighted_line_count / total_unweighted_lines * 100) if total_unweighted_lines > 0 else 0
+            weighted_pct = (weighted_line_count / total_weighted_lines * 100) if total_weighted_lines > 0 else 0
+            
+            print(f"{lang_display:<18} {file_count:<8} {unweighted_line_count:>{num_col_width},} {raw_pct:>4.1f}% {weighted_line_count:>{num_col_width},} {weighted_pct:>4.1f}%")
+        
+        print("-" * table_width)
+        
+        # Calculate total percentages (should be 100%)
+        raw_total_pct = (total_unweighted_lines / total_unweighted_lines * 100) if total_unweighted_lines > 0 else 0
+        weighted_total_pct = (total_weighted_lines / total_weighted_lines * 100) if total_weighted_lines > 0 else 0
+        
+        print(f"{'TOTAL':<18} {total_files:<8} {total_unweighted_lines:>{num_col_width},} {raw_total_pct:>4.1f}% {total_weighted_lines:>{num_col_width},} {weighted_total_pct:>4.1f}%")
+        print("=" * table_width)
     
     primary_language = sorted_stats[0][0]
-    primary_lines = sorted_stats[0][1][1]
-    percentage = (primary_lines / total_lines * 100) if total_lines > 0 else 0
+    primary_weighted_lines = sorted_stats[0][1][1]
+    primary_unweighted_lines = unweighted_stats[primary_language][1]
+    weighted_pct = (primary_weighted_lines / total_weighted_lines * 100) if total_weighted_lines > 0 else 0
+    unweighted_pct = (primary_unweighted_lines / total_unweighted_lines * 100) if total_unweighted_lines > 0 else 0
     
     primary_display = format_language_output(primary_language, with_glyph)
     print(f"\n✓ Primary Language: {primary_display}")
-    print(f"  ({primary_lines:,} lines, {percentage:.1f}% of total)")
+    
+    # Show both values in summary if weighted differs from unweighted
+    if primary_weighted_lines != primary_unweighted_lines:
+        print(f"  ({primary_unweighted_lines:,} raw {unweighted_pct:.1f}% → {primary_weighted_lines:,} weighted {weighted_pct:.1f}% of total)")
+    else:
+        print(f"  ({primary_weighted_lines:,} lines {weighted_pct:.1f}% of total)")
     print()
 
 
@@ -410,8 +516,28 @@ def get_primary_language(stats: Dict[str, Tuple[int, int]]) -> Optional[str]:
     """Get the primary language from statistics."""
     if not stats:
         return None
+    # Apply weights before determining primary language
+    stats = apply_weights_to_stats(stats)
     sorted_stats = sorted(stats.items(), key=lambda x: x[1][1], reverse=True)
     return sorted_stats[0][0]
+
+
+def apply_weights_to_stats(stats: Dict[str, Tuple[int, int]]) -> Dict[str, Tuple[int, int]]:
+    """
+    Apply language weights to raw line counts.
+    
+    Args:
+        stats: Dictionary with (file_count, unweighted_line_count) tuples
+        
+    Returns:
+        Same structure with weighted line counts
+    """
+    weighted_stats = {}
+    for lang, (file_count, line_count) in stats.items():
+        weight = LANGUAGE_WEIGHTS.get(lang, 1.0)
+        weighted_lines = int(line_count * weight)
+        weighted_stats[lang] = (file_count, weighted_lines)
+    return weighted_stats
 
 
 def format_language_output(language: str, with_glyph: bool = False) -> str:
@@ -477,6 +603,16 @@ Examples:
         help="Cache expiration time in seconds (default: 3600 = 1 hour, 0 = never expire)"
     )
     parser.add_argument(
+        "--weighted",
+        action="store_true",
+        help="Show weighted line counts instead of raw line counts"
+    )
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Show both raw and weighted line counts"
+    )
+    parser.add_argument(
         "--clear-cache",
         nargs="?",
         const="all",
@@ -514,15 +650,19 @@ Examples:
                 output = f"{args.prefix}{output}"
             print(output)
     elif args.json:
+        # Apply weights for JSON output
+        weighted_stats = apply_weights_to_stats(stats)
         output = {
             "primary_language": get_primary_language(stats),
             "primary_glyph": LANGUAGE_GLYPHS.get(get_primary_language(stats), "") if get_primary_language(stats) else None,
             "stats": {lang: {"files": count, "lines": lines} 
-                     for lang, (count, lines) in stats.items()}
+                     for lang, (count, lines) in weighted_stats.items()}
         }
         print(json.dumps(output, indent=2))
     else:
-        print_results(stats, args.with_glyph)
+        # Determine display mode: raw (default), weighted, or both
+        show_mode = 'both' if args.all else ('weighted' if args.weighted else 'raw')
+        print_results(stats, args.with_glyph, show_mode)
 
 
 if __name__ == "__main__":
