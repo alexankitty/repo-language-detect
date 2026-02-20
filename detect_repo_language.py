@@ -123,6 +123,7 @@ IGNORE_DIRS = {
     'release', 'releases',
     '.github', '.gitlab', '.bitbucket',
     '.conda', '.mypy_cache', '.ruff_cache', '.tox',
+    'debug', 'debug-info', 'debug-symbols',
 }
 
 IGNORE_FILES = {
