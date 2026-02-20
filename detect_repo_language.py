@@ -10,6 +10,8 @@ import sys
 import json
 import argparse
 import subprocess
+import time
+import hashlib
 from pathlib import Path
 from collections import defaultdict
 from typing import Dict, Tuple, Optional
@@ -136,6 +138,125 @@ def should_ignore(path: Path, root: Path) -> bool:
         return True
     
     return False
+
+
+def get_cache_dir() -> Path:
+    """Get the cache directory, creating it if necessary."""
+    cache_dir = Path.home() / ".cache" / "detect-repo-language"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    return cache_dir
+
+
+def get_cache_key(repo_path: str) -> str:
+    """
+    Generate a cache key for a repository.
+    
+    Tries to use git commit hash, falls back to repo path hash.
+    """
+    repo_root = Path(repo_path).resolve()
+    
+    # Try to get git commit hash (most reliable cache key)
+    try:
+        result = subprocess.run(
+            ['git', '-C', str(repo_root), 'rev-parse', 'HEAD'],
+            capture_output=True,
+            timeout=1,
+            text=True
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()[:12]  # First 12 chars of commit hash
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        pass
+    
+    # Fallback: hash the repo path
+    return hashlib.md5(str(repo_root).encode()).hexdigest()[:12]
+
+
+def get_cache_file(repo_path: str) -> Path:
+    """Get the cache file path for a repository."""
+    cache_key = get_cache_key(repo_path)
+    return get_cache_dir() / f"repo_{cache_key}.json"
+
+
+def read_cache(repo_path: str, cache_expiry: int) -> Optional[Dict[str, Tuple[int, int]]]:
+    """
+    Read cached results if available and not expired.
+    
+    Args:
+        repo_path: Path to the repository
+        cache_expiry: Cache expiration time in seconds (0 = never expire)
+        
+    Returns:
+        Cached stats dict if valid, None otherwise
+    """
+    cache_file = get_cache_file(repo_path)
+    
+    if not cache_file.exists():
+        return None
+    
+    try:
+        with open(cache_file, 'r') as f:
+            cache_data = json.load(f)
+        
+        # Check expiration
+        if cache_expiry > 0:
+            cache_time = cache_data.get("_timestamp", 0)
+            if time.time() - cache_time > cache_expiry:
+                return None  # Cache expired
+        
+        # Return cached stats
+        stats = cache_data.get("stats", {})
+        # Convert lists back to tuples
+        return {lang: tuple(counts) for lang, counts in stats.items()}
+    except (json.JSONDecodeError, IOError, KeyError):
+        return None
+
+
+def write_cache(repo_path: str, stats: Dict[str, Tuple[int, int]]) -> None:
+    """
+    Write analysis results to cache.
+    
+    Args:
+        repo_path: Path to the repository
+        stats: Language statistics to cache
+    """
+    cache_file = get_cache_file(repo_path)
+    
+    try:
+        cache_data = {
+            "_timestamp": time.time(),
+            "_repo_path": str(Path(repo_path).resolve()),
+            "stats": {lang: list(counts) for lang, counts in stats.items()}
+        }
+        
+        with open(cache_file, 'w') as f:
+            json.dump(cache_data, f, indent=2)
+    except IOError:
+        pass  # Silently skip cache write on permission errors
+
+
+def clear_cache(repo_path: Optional[str] = None) -> None:
+    """
+    Clear cache for a specific repository or all repositories.
+    
+    Args:
+        repo_path: Specific repo to clear, or None to clear all
+    """
+    cache_dir = get_cache_dir()
+    
+    if repo_path:
+        # Clear cache for specific repo
+        cache_file = get_cache_file(repo_path)
+        if cache_file.exists():
+            cache_file.unlink()
+            print(f"Cleared cache for {repo_path}")
+    else:
+        # Clear all cache
+        import shutil
+        if cache_dir.exists():
+            shutil.rmtree(cache_dir)
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            print("Cleared all caches")
 
 
 def is_git_repo(repo_path: str) -> bool:
@@ -339,13 +460,46 @@ Examples:
         action="store_true",
         help="Output results in JSON format"
     )
+    parser.add_argument(
+        "--no-cache",
+        action="store_true",
+        help="Disable caching for this run"
+    )
+    parser.add_argument(
+        "--cache-expiry",
+        type=int,
+        default=3600,
+        help="Cache expiration time in seconds (default: 3600 = 1 hour, 0 = never expire)"
+    )
+    parser.add_argument(
+        "--clear-cache",
+        nargs="?",
+        const="all",
+        metavar="REPO_PATH",
+        help="Clear cache (all caches if no path specified, or specific repo cache)"
+    )
     
     args = parser.parse_args()
+
+    # Handle cache clearing
+    if args.clear_cache is not None:
+        clear_cache(args.clear_cache if args.clear_cache != "all" else None)
+        sys.exit(0)
 
     check_dir(args.repo_path)  # Validate directory and git repo before loading config
     load_language_config()  # Load language definitions after confirming repo is valid
     
-    stats = analyze_repository(args.repo_path)
+    # Try to read from cache first (if caching enabled)
+    stats = None
+    if not args.no_cache:
+        stats = read_cache(args.repo_path, args.cache_expiry)
+    
+    # If cache miss, analyze repository
+    if stats is None:
+        stats = analyze_repository(args.repo_path)
+        # Write to cache for future runs
+        if not args.no_cache:
+            write_cache(args.repo_path, stats)
     
     if args.primary_only:
         language = get_primary_language(stats)

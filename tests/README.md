@@ -15,6 +15,7 @@ bash test_basic.sh          # Basic functionality tests
 bash test_prefix.sh         # Prefix option tests
 bash test_git_detection.sh  # Git repository detection
 bash test_languages.sh      # Language configuration loading
+bash test_cache.sh          # Caching functionality tests
 ```
 
 ## Test Files
@@ -40,6 +41,16 @@ bash test_languages.sh      # Language configuration loading
   - Language loading count
   - Template file exclusion
   - Glyph availability
+
+- **test_cache.sh** - Tests caching functionality:
+  - Cache creation on first run
+  - Cache hit/read on subsequent runs
+  - `--no-cache` flag behavior
+  - Cache JSON structure validation
+  - `--clear-cache` for specific repos
+  - `--cache-expiry` settings (0 = never expire)
+  - Multiple repository caching
+  - Cache consistency
 
 - **test_all.sh** - Master test runner that executes all test suites
 
