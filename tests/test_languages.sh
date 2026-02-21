@@ -12,7 +12,7 @@ echo ""
 
 echo "✓ Test 1: Count loaded languages"
 # Count JSON files in languages directory minus templates
-expected_count=$(find "$SCRIPT_DIR/src/detect-repo-language/languages" -name "*.json" ! -name "TEMPLATE*" | wc -l)
+expected_count=$(find "$SCRIPT_DIR/src/detect_repo_language/languages" -name "*.json" ! -name "TEMPLATE*" | wc -l)
 count=$(python3 -c "
 from detect_repo_language import LANGUAGE_EXTENSIONS, load_language_config
 load_language_config()

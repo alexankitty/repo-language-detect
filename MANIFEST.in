@@ -1,4 +1,4 @@
 include README.md
 include LICENSE
-recursive-include src/detect-repo-language/languages *.json
-exclude src/detect-repo-language/languages/TEMPLATE*.json
+recursive-include src/detect_repo_language/languages *.json
+exclude src/detect_repo_language/languages/TEMPLATE*.json

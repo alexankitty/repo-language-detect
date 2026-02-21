@@ -88,7 +88,7 @@ See [PKGBUILD-README.md](PKGBUILD-README.md) for Arch Linux setup details.
 
 ## Configuration
 
-See [languages/README.md](src/detect-repo-language/languages/README.md) for adding languages, customizing glyphs, and language name mappings.
+See [languages/README.md](src/detect_repo_language/languages/README.md) for adding languages, customizing glyphs, and language name mappings.
 
 ## Notes
 
