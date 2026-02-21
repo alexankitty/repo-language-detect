@@ -1,6 +1,6 @@
 # Maintainer: Alexandra
 pkgname=detect-repo-language
-pkgver=1.2.0
+pkgver=1.3.0
 pkgrel=1
 pkgdesc="Detect the primary programming language of a repository by analyzing file extensions and lines of code"
 arch=('any')

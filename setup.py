@@ -18,7 +18,7 @@ if readme_path.exists():
 
 setup(
     name="detect-repo-language",
-    version="1.2.0",
+    version="1.3.0",
     author="Alexandra",
     description="Detect the primary programming language of a repository",
     long_description=long_description,

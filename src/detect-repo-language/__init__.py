@@ -1,5 +1,5 @@
 # Language file extension mappings, glyphs, and weights (loaded from JSON)
-VERSION = "1.2.0"
+VERSION = "1.3.0"
 LANGUAGE_EXTENSIONS: dict[str, list[str]] = {}
 LANGUAGE_GLYPHS: dict[str,str] = {}
 LANGUAGE_WEIGHTS: dict[str,float] = {}  # Weight multiplier for each language (default 1.0)
