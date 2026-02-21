@@ -1,17 +1,11 @@
 # Language Definitions
 
-This folder contains language definitions used by `detect_repo_language.py` to identify programming languages by file extension.
+Language configurations for file extension recognition.
 
-## Adding a New Language
+## Adding a Language
 
-To add support for a new language, follow these steps:
-
-1. **Copy the template:**
-   ```bash
-   cp TEMPLATE.json mylanguage.json
-   ```
-
-2. **Edit the file** with your language's extensions, Nerdfont glyph, and optional weight:
+1. Copy template: `cp TEMPLATE.json mylanguage.json`
+2. Edit with your language's extensions and Nerdfont glyph:
    ```json
    {
      "extensions": [".py", ".pyw"],
@@ -19,34 +13,29 @@ To add support for a new language, follow these steps:
      "weight": 1.0
    }
    ```
+3. Fields:
+   - `extensions`: Array of file extensions (with dot)
+   - `glyph`: Nerdfont Unicode (optional, empty string `""` if none)
+   - `weight`: Multiplier (optional, default 1.0; use <1.0 to deprioritize, >1.0 to prioritize)
+4. Save—auto-discovered on next run!
 
-3. **Fields:**
-   - `extensions`: Array of file extensions (including the dot, e.g., `".py"`)
-   - `glyph`: Unicode escape sequence for a Nerdfont icon (optional, can be empty string `""`)
-   - `weight`: Multiplier for line counts (optional, default 1.0). Use values < 1.0 to deprioritize language (e.g., 0.5), > 1.0 to prioritize
+## Naming
 
-4. **Save and test:**
-   The script will automatically discover and load your new language on the next run!
-
-## Language Name Mapping
-
-The filename is automatically converted to a language name:
-
+Filename → Language name:
 - `python.json` → `Python`
 - `javascript.json` → `Javascript`
-- `c-sharp.json` → `C#` (special mapping)
-- `c++.json` → `C++` (special mapping)
-- `json.json` → `JSON` (auto-uppercase)
-- `yaml.json` → `YAML` (auto-uppercase)
+- `c-sharp.json` → `C#`
+- `c++.json` → `C++`
+- `json.json` → `JSON`
+- `yaml.json` → `YAML`
 
-For special cases that don't follow standard rules, edit the `name_mapping` dictionary in `detect_repo_language.py`.
+Special cases in `name_mapping` dict in main module.
 
 ## Finding Nerdfont Glyphs
 
 1. Visit [Nerd Fonts Cheat Sheet](https://www.nerdfonts.com/cheat-sheet)
-2. Search for your language/icon
-3. Copy the Unicode codepoint (e.g., `e73c` for Python)
-4. Add backslash prefix: `\ue73c`
+2. Search, copy Unicode (e.g., `e73c`)
+3. Add backslash: `\ue73c`
 
 ## Examples
 

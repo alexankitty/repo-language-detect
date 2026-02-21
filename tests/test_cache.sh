@@ -4,7 +4,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-LANG_DETECT="$SCRIPT_DIR/detect_repo_language.py"
+export PYTHONPATH="$SCRIPT_DIR/src:$PYTHONPATH"
 CACHE_DIR="$HOME/.cache/detect-repo-language"
 
 # Color codes for output
@@ -17,8 +17,8 @@ echo ""
 
 # Test 1: Cache creation
 echo "✓ Test 1: Cache creation on first run"
-python3 "$LANG_DETECT" --clear-cache . > /dev/null 2>&1 || true
-output=$(python3 "$LANG_DETECT" --primary-only . 2>&1)
+python3 -m detect_repo_language --clear-cache . > /dev/null 2>&1 || true
+output=$(python3 -m detect_repo_language --primary-only . 2>&1)
 cache_file=$(ls "$CACHE_DIR"/repo_*.json 2>/dev/null | head -1)
 if [[ ! -z "$cache_file" && ! -z "$output" ]]; then
   echo "  Output: $output"
@@ -32,8 +32,8 @@ echo ""
 
 # Test 2: Cache hit - same output
 echo "✓ Test 2: Cache hit returns same result"
-output1=$(python3 "$LANG_DETECT" --primary-only . 2>&1)
-output2=$(python3 "$LANG_DETECT" --primary-only . 2>&1)
+output1=$(python3 -m detect_repo_language --primary-only . 2>&1)
+output2=$(python3 -m detect_repo_language --primary-only . 2>&1)
 if [[ "$output1" == "$output2" ]]; then
   echo "  Output 1: $output1"
   echo "  Output 2: $output2"
@@ -48,7 +48,7 @@ echo ""
 echo "✓ Test 3: --no-cache flag disables caching"
 cache_mtime_before=$(stat -f%m "$cache_file" 2>/dev/null || stat -c%Y "$cache_file" 2>/dev/null)
 sleep 1
-output=$(python3 "$LANG_DETECT" --no-cache --primary-only . 2>&1)
+output=$(python3 -m detect_repo_language --no-cache --primary-only . 2>&1)
 cache_mtime_after=$(stat -f%m "$cache_file" 2>/dev/null || stat -c%Y "$cache_file" 2>/dev/null)
 if [[ "$cache_mtime_before" == "$cache_mtime_after" ]]; then
   echo "  Output: $output"
@@ -76,7 +76,7 @@ echo ""
 # Test 5: --clear-cache for specific repo
 echo "✓ Test 5: --clear-cache removes specific repo cache"
 cache_count_before=$(ls "$CACHE_DIR"/repo_*.json 2>/dev/null | wc -l)
-python3 "$LANG_DETECT" --clear-cache . > /dev/null 2>&1
+python3 -m detect_repo_language --clear-cache . > /dev/null 2>&1
 cache_count_after=$(ls "$CACHE_DIR"/repo_*.json 2>/dev/null | wc -l || echo "0")
 if [[ $cache_count_after -lt $cache_count_before ]]; then
   echo "  Cache files before: $cache_count_before, after: $cache_count_after"
@@ -89,10 +89,10 @@ echo ""
 
 # Test 6: --cache-expiry 0 (never expire)
 echo "✓ Test 6: --cache-expiry 0 never expires cache"
-python3 "$LANG_DETECT" --primary-only . > /dev/null 2>&1
+python3 -m detect_repo_language --primary-only . > /dev/null 2>&1
 cache_mtime=$(stat -f%m "$CACHE_DIR"/repo_*.json 2>/dev/null || stat -c%Y "$CACHE_DIR"/repo_*.json 2>/dev/null | head -1)
 sleep 1
-python3 "$LANG_DETECT" --cache-expiry 0 --primary-only . > /dev/null 2>&1
+python3 -m detect_repo_language --cache-expiry 0 --primary-only . > /dev/null 2>&1
 cache_mtime_after=$(stat -f%m "$CACHE_DIR"/repo_*.json 2>/dev/null || stat -c%Y "$CACHE_DIR"/repo_*.json 2>/dev/null | head -1)
 if [[ "$cache_mtime" == "$cache_mtime_after" ]]; then
   echo "  Cache timestamp unchanged (not reanalyzed)"
@@ -104,8 +104,8 @@ echo ""
 
 # Test 7: JSON output with cache
 echo "✓ Test 7: JSON output works with cached results"
-python3 "$LANG_DETECT" --clear-cache . > /dev/null 2>&1
-output=$(python3 "$LANG_DETECT" --json . 2>&1 | head -1)
+python3 -m detect_repo_language --clear-cache . > /dev/null 2>&1
+output=$(python3 -m detect_repo_language --json . 2>&1 | head -1)
 if [[ "$output" == *"{"* ]]; then
   echo "  Output: $(echo $output | head -c 30)..."
   echo "  PASS (JSON valid)"
@@ -125,10 +125,10 @@ echo 'print("test")' > test.py
 git add test.py > /dev/null 2>&1
 git commit -m "test" > /dev/null 2>&1
 
-python3 "$LANG_DETECT" --clear-cache > /dev/null 2>&1
-python3 "$LANG_DETECT" --primary-only . > /dev/null 2>&1
+python3 -m detect_repo_language --clear-cache > /dev/null 2>&1
+python3 -m detect_repo_language --primary-only . > /dev/null 2>&1
 cd "$SCRIPT_DIR"
-python3 "$LANG_DETECT" --primary-only . > /dev/null 2>&1
+python3 -m detect_repo_language --primary-only . > /dev/null 2>&1
 
 cache_count=$(ls "$CACHE_DIR"/repo_*.json 2>/dev/null | wc -l)
 if [[ $cache_count -ge 2 ]]; then
@@ -141,9 +141,9 @@ echo ""
 
 # Test 9: Cache consistency with --no-cache
 echo "✓ Test 9: Cache and --no-cache give same results"
-python3 "$LANG_DETECT" --clear-cache . > /dev/null 2>&1
-output_cached=$(python3 "$LANG_DETECT" --primary-only . 2>&1)
-output_no_cache=$(python3 "$LANG_DETECT" --no-cache --primary-only . 2>&1)
+python3 -m detect_repo_language --clear-cache . > /dev/null 2>&1
+output_cached=$(python3 -m detect_repo_language --primary-only . 2>&1)
+output_no_cache=$(python3 -m detect_repo_language --no-cache --primary-only . 2>&1)
 if [[ "$output_cached" == "$output_no_cache" ]]; then
   echo "  Cached output: $output_cached"
   echo "  No-cache output: $output_no_cache"
@@ -156,7 +156,7 @@ echo ""
 
 # Test 10: Cache file cleanup on clear-cache all
 echo "✓ Test 10: --clear-cache with no args clears all"
-python3 "$LANG_DETECT" --clear-cache > /dev/null 2>&1
+python3 -m detect_repo_language --clear-cache > /dev/null 2>&1
 cache_count=$(ls "$CACHE_DIR"/repo_*.json 2>/dev/null | wc -l || echo "0")
 if [[ $cache_count -eq 0 ]]; then
   echo "  Cached repos after clear: $cache_count"

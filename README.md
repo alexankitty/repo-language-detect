@@ -1,202 +1,70 @@
 # Repository Language Detector
 
-A Python script that analyzes a repository to determine its primary programming language by counting files and lines of code.  
-Yes this was entirely vibe coded. No I don't really care. No this statement did not come from the AI. Use it if you want, it works, I just didn't want to make the effort.  
-By the way, this dumbass robot makes a bunch of baseless claims that I am not willing to verify or stand behind.
+Analyzes a git repository to determine its primary programming language by counting files and lines of code.
 
 ## Features
 
-- 🔍 **Git-only**: Only analyzes git repositories (exits silently otherwise)
-- 📁 Scans all files in a repository recursively
-- 🗣️ Supports 31+ programming languages and formats
-- 📊 Counts both files and lines of code
-- 🚫 Ignores common non-source directories (`node_modules`, `.git`, `venv`, etc.)
-- 📈 Provides formatted output with statistics
-- 🎯 Identifies the primary language with percentage breakdown
-- 🎨 Optional Nerdfont glyph/icon display
-- ⚡ **Ultra-fast** - ~85ms fresh analysis, **63x faster from cache** (~1ms)
-- 💾 **Smart caching** with configurable expiration (git-aware invalidation)
-- 🔄 Works in nested git folders (automatically finds parent repo)
-- 🎯 Works from anywhere - searches 5 locations for language definitions
+- Git-only (exits silently on non-git directories)
+- 31+ language support
+- Smart git-aware caching
+- Optional Nerdfont glyphs
+- File & LOC statistics
 
 ## Installation
 
-No external dependencies required! Just ensure you have Python 3.7+.
-
-### Method 1: Direct Script (Simple)
 ```bash
+# Method 1: Direct (simple)
 chmod +x detect_repo_language.py
-./detect_repo_language.py --primary-only /path/to/repo
+python3 -m detect_repo_language --primary-only /path/to/repo
+
+# Method 2: As Python module
+pip install .
+
+# Method 3: Arch Linux
+makepkg -si  # or: cp PKGBUILD.pypi PKGBUILD && makepkg -si (for PyPI)
 ```
 
-### Method 2: Install as Command (Wheel)
-Install the built wheel package:
+## Usage
 
 ```bash
-pip install dist/detect_repo_language-1.0.0-py3-none-any.whl
+# Primary language only
+python3 -m detect_repo_language --primary-only
+
+# With Nerdfont glyph
+python3 -m detect_repo_language --primary-only --with-glyph
+
+# With custom prefix
+python3 -m detect_repo_language --primary-only --prefix "󱔎 "
+
+# JSON output
+python3 -m detect_repo_language --json
+
+# Cache options
+python3 -m detect_repo_language --no-cache              # Skip cache
+python3 -m detect_repo_language --cache-expiry 0       # Never expire
+python3 -m detect_repo_language --clear-cache          # Clear all
+python3 -m detect_repo_language --clear-cache /path    # Clear specific
 ```
-
-Then use from anywhere:
-```bash
-detect-repo-language --primary-only /path/to/repo
-```
-
-Or build the wheel yourself:
-```bash
-pip install build
-python3 -m build --wheel
-pip install dist/*.whl
-```
-
-### Method 3: Arch Linux (PKGBUILD)
-For Arch Linux, install using the PKGBUILD:
-
-```bash
-makepkg -si
-```
-
-If installing from PyPI:
-```bash
-cp PKGBUILD.pypi PKGBUILD
-makepkg -si
-```
-
-See [PKGBUILD-README.md](PKGBUILD-README.md) for detailed Arch Linux installation instructions and options.
 
 ## Project Structure
 
 ```
-lang-detect/
-├── detect_repo_language.py    # Main script
-├── languages/                 # Language definitions (auto-loaded)
-│   ├── python.json
-│   ├── javascript.json
-│   ├── c-sharp.json
-│   ├── c++.json
-│   └── ... (one file per language)
-├── README.md
-└── .git/
+src/detect-repo-language/
+├── __init__.py, __main__.py, analyze.py, parser.py, cache.py, formatter.py, language.py
+└── languages/                           # Language definitions (auto-discovered)
+    ├── python.json, javascript.json, ...
+    └── TEMPLATE.json
+tests/
+├── test_*.sh                           # Test suites
 ```
 
-All language configurations are discovered and loaded recursively from the `languages/` folder.
+## Architecture
 
-## Usage
+- Auto-discovers language configs from `languages/` folder
+- Git commit hash used for cache key (invalidates on code changes)
+- Ignores: `.git`, `node_modules`, `venv`, `__pycache__`, `.cache`, and 20+ other common dirs
 
-**Requirements:**
-- The target directory must be a git repository (must contain a `.git` folder)
-- If run on a non-git directory, the script exits silently with code 0
-
-**Full analysis (default):**
-```bash
-./detect_repo_language.py
-./detect_repo_language.py /path/to/repo
-```
-
-**Lightweight mode (for Starship integration):**
-```bash
-./detect_repo_language.py --primary-only
-./detect_repo_language.py --primary-only /path/to/repo
-```
-Output: Just the language name (e.g., `Python`)
-
-**With Nerdfont icon/glyph:**
-```bash
-./detect_repo_language.py --primary-only --with-glyph
-./detect_repo_language.py --with-glyph
-```
-Output: Language with icon (e.g., ` Python`)
-
-**With custom prefix:**
-```bash
-./detect_repo_language.py --primary-only --prefix "Language: "
-./detect_repo_language.py --primary-only --prefix "󱔎 "
-```
-Output: Prefixed language (e.g., `Language: Python` or `󱔎 Python`)
-
-**Combining options:**
-```bash
-./detect_repo_language.py --primary-only --with-glyph --prefix "📝 "
-```
-Output: `📝  Python`
-
-**JSON output:**
-```bash
-./detect_repo_language.py --json
-./detect_repo_language.py --json /path/to/repo
-```
-
-## Performance & Caching
-
-### Caching (New in v1.1.0)
-
-The script now caches analysis results for significantly faster subsequent runs:
-
-**Disable cache for a single run:**
-```bash
-./detect_repo_language.py --no-cache /path/to/repo
-```
-
-**Set custom cache expiration (in seconds):**
-```bash
-# Default: 3600 seconds (1 hour)
-./detect_repo_language.py --cache-expiry 7200 /path/to/repo
-
-# Never expire: 0 = infinite (cache only invalidated on code changes)
-./detect_repo_language.py --cache-expiry 0 /path/to/repo
-```
-
-**Clear cache:**
-```bash
-# Clear cache for specific repository
-./detect_repo_language.py --clear-cache /path/to/repo
-
-# Clear all caches
-./detect_repo_language.py --clear-cache
-```
-
-**Cache details:**
-- Location: `~/.cache/detect-repo-language/`
-- Key: Git commit hash (auto-invalidates on code changes) or repo path hash
-- Format: JSON with metadata timestamp
-- Multiple repos: Each repository is cached independently
-
-### Performance Metrics
-
-| Scenario | Time |
-|----------|------|
-| Fresh analysis (typical repo) | ~85ms |
-| From cache (same repo) | ~1ms |
-| **Speedup** | **63x** |
-| Linux kernel (93K files, fresh) | 4.8s |
-| Linux kernel (from cache) | 0.08s |
-
-**JSON output:**
-```bash
-./detect_repo_language.py --json
-./detect_repo_language.py --json /path/to/repo
-```
-
-**Example output (default mode):**
-```
-============================================================
-Repository Language Analysis
-============================================================
-Language             Files      Lines of Code  
-------------------------------------------------------------
- Python              45         12,342         
- JavaScript          23         8,901          
- YAML                8          234            
- JSON                15         156            
- Markdown            12         892            
-------------------------------------------------------------
-TOTAL                103        22,525         
-============================================================
-
-✓ Primary Language: Python
-  (12,342 lines, 54.8% of total)
-```
-
-## Supported Languages
+See [PKGBUILD-README.md](PKGBUILD-README.md) for Arch Linux setup details.
 
 - **Core:** Python, JavaScript, TypeScript, Java, C, C++, C#
 - **Web:** HTML, CSS, PHP
@@ -220,64 +88,12 @@ TOTAL                103        22,525
 
 ## Configuration
 
-Language definitions (file extensions and Nerdfont glyphs) are organized in the `languages/` folder. Each language has its own JSON file, making it very easy to:
-- Add support for new languages by creating a new file
-- Customize glyph icons for your setup
-- Update extensions without touching the code
-- Organize languages hierarchically (subfolders are supported)
-
-### Adding a New Language
-
-The easiest way to add a new language:
-
-1. **Copy the template file:**
-   ```bash
-   cp languages/TEMPLATE.json languages/mylanguage.json
-   ```
-
-2. **Edit the file** with your language's extensions and Nerdfont glyph:
-   ```json
-   {
-     "extensions": [".ext1", ".ext2"],
-     "glyph": "\uXXXX"
-   }
-   ```
-
-3. **Save and test** - the script will automatically discover your new language!
-
-For detailed instructions, examples, and tips for finding Nerdfont glyphs, see [languages/README.md](languages/README.md).
-
-For example, to add Lua support, create `languages/lua.json`:
-
-```json
-{
-  "extensions": [".lua"],
-  "glyph": "\ue60a"
-}
-```
-
-The script will automatically:
-- Discover the new file on next run
-- Convert the filename to the language name (e.g., `lua.json` → `Lua`)
-- Add it to the analysis
-
-### Language Name Mapping
-
-The script automatically converts filenames to proper language names:
-- `python.json` → `Python`
-- `c-sharp.json` → `C#`
-- `c++.json` → `C++`
-- `json.json` → `JSON`
-- `yaml.json` → `YAML`
-- `xml.json` → `XML`
-- `html.json` → `HTML`
-
-For special cases, edit the `name_mapping` dictionary in the script.
+See [languages/README.md](src/detect-repo-language/languages/README.md) for adding languages, customizing glyphs, and language name mappings.
 
 ## Notes
 
 - **Git Detection:** Fast path checks `.git` folder first. Works in nested directories. Falls back to git command if needed.
-- **Performance:** Optimized with O(1) language lookups via pre-computed maps, fast git detection, and smart caching. Fresh runs ~85ms, cached runs ~1ms.
+- **Performance:** Optimized with O(1) language lookups via pre-computed maps, fast git detection, and smart caching.
 - **Cache:** Automatically invalidates when git commit hash changes. Configure with `--cache-expiry` and `--clear-cache`.
 - **Development:** Multiple language search paths support development, system installs, Arch Linux, wheels, and direct script execution.
 - Comment detection is basic (lines starting with `#`, `//`, `/*`)
@@ -335,25 +151,11 @@ format = '[$symbol $output ]($style)'
 require_repo = true
 ```
 
-This will display the repository's primary language (with icon if enabled) in your shell prompt as you navigate between projects. The `--primary-only` flag ensures minimal overhead (~66ms) suitable for real-time prompt updates.
+This will display the repository's primary language (with icon if enabled) in your shell prompt as you navigate between projects.
 
 ## Testing
 
-A comprehensive test suite is available in the `tests/` folder to verify functionality:
-
-```bash
-# Run all tests
-bash tests/test_all.sh
-
-# Run specific test suites
-bash tests/test_basic.sh          # Core functionality
-bash tests/test_prefix.sh         # Prefix option
-bash tests/test_languages.sh      # Language loading
-bash tests/test_git_detection.sh  # Git detection
-bash tests/test_cache.sh          # Caching functionality (NEW in v1.1.0)
-```
-
-See [tests/README.md](tests/README.md) for detailed information about the test suite.
+See [tests/README.md](tests/README.md) for test suite information.
 
 ## Examples
 

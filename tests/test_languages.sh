@@ -5,18 +5,22 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$SCRIPT_DIR"
+export PYTHONPATH="$SCRIPT_DIR/src:$PYTHONPATH"
 
 echo "=== LANGUAGE LOADING TESTS ==="
 echo ""
 
 echo "✓ Test 1: Count loaded languages"
+# Count JSON files in languages directory minus templates
+expected_count=$(find "$SCRIPT_DIR/src/detect-repo-language/languages" -name "*.json" ! -name "TEMPLATE*" | wc -l)
 count=$(python3 -c "
 from detect_repo_language import LANGUAGE_EXTENSIONS, load_language_config
 load_language_config()
 print(len(LANGUAGE_EXTENSIONS))
 " 2>&1 || true)
+echo "  Expected languages: $expected_count"
 echo "  Loaded languages: $count"
-[[ "$count" == "31" ]] && echo "  PASS" || echo "  Note: $count languages loaded (expected 31)"
+[[ "$count" == "$expected_count" ]] && echo "  PASS" || echo "  FAIL: Expected $expected_count but got $count"
 echo ""
 
 echo "✓ Test 2: Verify TEMPLATE.json is excluded"
