@@ -34,11 +34,11 @@ setup(
     package_dir={"": "src"},
     packages=find_packages(where="src"),
     package_data={
-        "detect_repo_language": ["languages/*.json"],
+        "detect-repo-language": ["languages/*.json"],
     },
     entry_points={
         "console_scripts": [
-            "detect-repo-language=detect_repo_language:main",
+            "detect-repo-language=detect-repo-language:main",
         ],
     },
     classifiers=[
