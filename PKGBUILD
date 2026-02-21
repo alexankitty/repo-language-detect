@@ -22,5 +22,5 @@ package() {
     
     # Install languages data files to system data directory
     mkdir -p "${pkgdir}/usr/share/detect-repo-language/languages"
-    cp -r src/detect-repo-language/languages/*.json "${pkgdir}/usr/share/detect-repo-language/languages/"
+    cp -r src/detect_repo_language/languages/*.json "${pkgdir}/usr/share/detect-repo-language/languages/"
 }
