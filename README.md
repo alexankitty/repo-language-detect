@@ -49,7 +49,7 @@ python3 -m detect_repo_language --clear-cache /path    # Clear specific
 ## Project Structure
 
 ```
-src/detect-repo-language/
+src/detect_repo_language/
 ├── __init__.py, __main__.py, analyze.py, parser.py, cache.py, formatter.py, language.py
 └── languages/                           # Language definitions (auto-discovered)
     ├── python.json, javascript.json, ...
@@ -95,7 +95,7 @@ See [languages/README.md](src/detect_repo_language/languages/README.md) for addi
 - **Git Detection:** Fast path checks `.git` folder first. Works in nested directories. Falls back to git command if needed.
 - **Performance:** Optimized with O(1) language lookups via pre-computed maps, fast git detection, and smart caching.
 - **Cache:** Automatically invalidates when git commit hash changes. Configure with `--cache-expiry` and `--clear-cache`.
-- **Development:** Multiple language search paths support development, system installs, Arch Linux, wheels, and direct script execution.
+- **Development:** Multiple language search paths support development, system installs, Arch Linux, wheels, and module execution.
 - Comment detection is basic (lines starting with `#`, `//`, `/*`)
 - For accurate results, ensure the repository doesn't have generated code in version control
 - Ignores package lock files, build artifacts, and cache directories automatically
@@ -107,7 +107,7 @@ Add language detection to your Starship prompt with optional icons:
 **Basic version (language name only):**
 ```toml
 [custom.language]
-command = "detect_repo_language.py --primary-only"
+command = "python3 -m detect_repo_language --primary-only"
 when = true
 format = ' $output '
 require_repo = true
@@ -116,7 +116,7 @@ require_repo = true
 **With Nerdfont icon (recommended for Nerd Font users):**
 ```toml
 [custom.language]
-command = "detect_repo_language.py --primary-only --with-glyph"
+command = "python3 -m detect_repo_language --primary-only --with-glyph"
 when = true
 style = "bold blue"
 format = '[ $output ]($style)'
@@ -126,7 +126,7 @@ require_repo = true
 **With custom prefix:**
 ```toml
 [custom.language]
-command = "detect_repo_language.py --primary-only --prefix '󱔎 '"
+command = "python3 -m detect_repo_language --primary-only --prefix '󱔎 '"
 when = true
 style = "bold magenta"
 require_repo = true
@@ -135,7 +135,7 @@ require_repo = true
 **With prefix and glyph:**
 ```toml
 [custom.language]
-command = "detect_repo_language.py --primary-only --with-glyph --prefix '📝 '"
+command = "python3 -m detect_repo_language --primary-only --with-glyph --prefix '📝 '"
 when = true
 require_repo = true
 ```
@@ -143,7 +143,7 @@ require_repo = true
 **Full example in `starship.toml`:**
 ```toml
 [custom.language]
-command = "detect_repo_language.py --primary-only --with-glyph"
+command = "python3 -m detect_repo_language --primary-only --with-glyph"
 symbol = "󱔎 "
 when = true
 style = "bold cyan"
@@ -161,29 +161,29 @@ See [tests/README.md](tests/README.md) for test suite information.
 
 Check the primary language of your current project:
 ```bash
-cd ~/my-project && ~/detect_repo_language.py
+cd ~/my-project && python3 -m detect_repo_language
 ```
 
 Get just the language name for scripting:
 ```bash
-~/detect_repo_language.py --primary-only ~/projects/my-app
+python3 -m detect_repo_language --primary-only ~/projects/my-app
 # Output: Python
 ```
 
 **Get the language with Nerdfont icon:**
 ```bash
-~/detect_repo_language.py --primary-only --with-glyph ~/projects/my-app
+python3 -m detect_repo_language --primary-only --with-glyph ~/projects/my-app
 # Output:  Python
 ```
 
 **Get JSON output for integration with other tools:**
 ```bash
-~/detect_repo_language.py --json ~/projects/my-app
+python3 -m detect_repo_language --json ~/projects/my-app
 # Output includes primary_language, primary_glyph, and detailed stats
 ```
 
 Use in scripting:
 ```bash
-PRIMARY=$(~/detect_repo_language.py . | grep "Primary Language" | awk '{print $3}')
+PRIMARY=$(python3 -m detect_repo_language -p)
 echo "This repo is primarily written in: $PRIMARY"
 ```
